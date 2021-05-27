@@ -57,7 +57,11 @@ type WriteStorage struct {
 
 	// For timestampTracker.
 	highestTimestamp *maxTimestamp
+
+	newClient WriteClientFunc
 }
+
+type WriteClientFunc func(name string, conf *ClientConfig) (WriteClient, error)
 
 // NewWriteStorage creates and runs a WriteStorage.
 func NewWriteStorage(logger log.Logger, reg prometheus.Registerer, walDir string, flushDeadline time.Duration, sm ReadyScrapeManager) *WriteStorage {
@@ -83,6 +87,8 @@ func NewWriteStorage(logger log.Logger, reg prometheus.Registerer, walDir string
 				Help:      "Highest timestamp that has come into the remote storage via the Appender interface, in seconds since epoch.",
 			}),
 		},
+
+		newClient: NewWriteClient,
 	}
 	if reg != nil {
 		reg.MustRegister(rws.highestTimestamp)
@@ -131,7 +137,7 @@ func (rws *WriteStorage) ApplyConfig(conf *config.Config) error {
 			name = rwConf.Name
 		}
 
-		c, err := NewWriteClient(name, &ClientConfig{
+		c, err := rws.newClient(name, &ClientConfig{
 			URL:              rwConf.URL,
 			Timeout:          rwConf.RemoteTimeout,
 			HTTPClientConfig: rwConf.HTTPClientConfig,

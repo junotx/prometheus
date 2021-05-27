@@ -75,6 +75,15 @@ func NewStorage(l log.Logger, reg prometheus.Registerer, stCallback startTimeCal
 	return s
 }
 
+func NewStorageWithWriteClientFunc(l log.Logger, reg prometheus.Registerer, stCallback startTimeCallback, walDir string, flushDeadline time.Duration, sm ReadyScrapeManager,
+	newClient WriteClientFunc) *Storage {
+	s := NewStorage(l, reg, stCallback, walDir, flushDeadline, sm)
+	if newClient != nil {
+		s.rws.newClient = newClient
+	}
+	return s
+}
+
 // ApplyConfig updates the state as the new config requires.
 func (s *Storage) ApplyConfig(conf *config.Config) error {
 	s.mtx.Lock()
